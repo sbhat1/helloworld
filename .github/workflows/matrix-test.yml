@@ -1,0 +1,48 @@
+name: tf-app-stack
+
+env:
+  KV_LIST: "{}"
+on:
+  push:
+    paths:
+      - '.github/workflows/matrix-test.yml'
+jobs:
+  matrix-output:
+    name: matrix-output
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: ["dev","sit"]
+    environment:
+      name: ${{ matrix.environment }}
+    steps:
+      - name: form kv output list
+        run: |
+          val=$(echo $KV_LIST | jq --arg v "key_vault_${{ matrix.environment }}" --arg w "kv_val_${{ matrix.environment }}" '.[$v]=$w')
+          echo "val - $val"
+          #export KV_LIST=$val
+          echo 'KV_LIST<<EOF' >> $GITHUB_ENV
+          echo "${val}" >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+          echo "kv_val ${{ env.KV_LIST }}"
+      - name: step output
+        run: |
+          export KV_LIST="$KV_LIST"
+          echo "$KV_LIST"
+          
+  check-output:
+    needs: [matrix-output]
+    name: matrix-output
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: ["dev","sit"]
+    environment:
+      name: ${{ matrix.environment }}
+    steps:
+     - name: kv output
+       run: |
+        kvval=$(echo "$KV_LIST" | jq ."key_vault_${{ matrix.environment }}" -r)
+        echo "kv output - $kvval"
